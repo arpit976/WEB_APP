@@ -1,83 +1,145 @@
 import Product from '../models/product.model.js'
 import extend from 'lodash/extend.js'
 import errorHandler from './error.controller.js'
-const create = async (req, res) => {
-    const product = new Product(req.body)
+
+const getAllProducts = async (req, res) => {
     try {
-        await product.save()
-        return res.status(200).json({
-            message: "Successfully signed up!"
-        })
+        // Retrieve all products from the database
+        const products = await Product.find();
+
+        // Return the products as JSON response
+        res.json(products);
+    } catch (err) {
+        // If an error occurs, return an error response
+        return res.status(400).json({
+            error: errorHandler.getErrorMessage(err)
+        });
+    }
+};
+
+const findProductById = async (req, res) => {
+    try {
+        const productId = req.params.id;
+
+        // Find the product by its ID
+        const product = await Product.findById(productId);
+
+        // Check if product exists
+        if (!product) {
+            return res.status(404).json({
+                error: "Product not found"
+            });
+        }
+
+        // If product exists, return it
+        res.json(product);
     } catch (err) {
         return res.status(400).json({
             error: errorHandler.getErrorMessage(err)
-        })
+        });
     }
-}
-const list = async (req, res) => {
+};
+const addNewProduct = async (req, res) => {
     try {
-        let Products = await Product.find().select("name description price quantity category")
-        res.json(Products)
+        // Extract product details from request body
+        const { name, description, price, quantity, category } = req.body;
+
+        // Create a new product instance
+        const product = new Product({
+            name,
+            description,
+            price,
+            quantity,
+            category
+        });
+
+        // Save the product to the database
+        await product.save();
+
+        // Return success message
+        res.status(201).json({
+            message: "Product added successfully",
+            product
+        });
     } catch (err) {
+        // If an error occurs, return an error response
         return res.status(400).json({
             error: errorHandler.getErrorMessage(err)
-        })
+        });
     }
-}
-const productByID = async (req, res, next, id) => {
+};
+const updateProductById = async (req, res) => {
     try {
-        let Product = await Product.findById(id)
-        if (!Product)
-            return res.status('400').json({
-                error: "User not found"
-            })
-        req.profile = Product
-        next()
+        const productId = req.params.id;
+
+        // Find the product by its ID
+        let product = await Product.findById(productId);
+
+        // Check if product exists
+        if (!product) {
+            return res.status(404).json({
+                error: "Product not found"
+            });
+        }
+
+        // Update product details with the data from the request body
+        product.set(req.body);
+
+        // Save the updated product
+        product = await product.save();
+
+        // Return the updated product
+        res.json(product);
     } catch (err) {
-        return res.status('400').json({
-            error: "Could not retrieve user"
-        })
-    }
-}
-const read = (req, res) => {
-    req.profile.hashed_password = undefined
-    req.profile.salt = undefined
-    return res.json(req.profile)
-}
-const update = async (req, res) => {
-    try {
-        let user = req.profile
-        user = extend(user, req.body)
-        user.updated = Date.now()
-        await user.save()
-        user.hashed_password = undefined
-        user.salt = undefined
-        res.json(user)
-    } catch (err) {
+        // If an error occurs, return an error response
         return res.status(400).json({
             error: errorHandler.getErrorMessage(err)
-        })
+        });
     }
-}
-const remove = async (req, res) => {
+};
+const removeProductById = async (req, res) => {
     try {
-        let user = req.profile
-        let deletedUser = await user.deleteOne()
-        deletedUser.hashed_password = undefined
-        deletedUser.salt = undefined
-        res.json(deletedUser)
+        const productId = req.params.id;
+
+        // Find the product by its ID and remove it
+        const deletedProduct = await Product.findByIdAndDelete(productId);
+
+        // Check if product exists
+        if (!deletedProduct) {
+            return res.status(404).json({
+                error: "Product not found"
+            });
+        }
+
+        // Return the deleted product
+        res.json(deletedProduct);
     } catch (err) {
+        // If an error occurs, return an error response
         return res.status(400).json({
             error: errorHandler.getErrorMessage(err)
-        })
+        });
     }
-}
-const findProductsByName = async (req, res) => {
+};
+const removeAllProducts = async (req, res) => {
+    try {
+        // Remove all products from the database
+        const deletedProducts = await Product.deleteMany();
+
+        // Return the deleted products
+        res.json(deletedProducts);
+    } catch (err) {
+        // If an error occurs, return an error response
+        return res.status(400).json({
+            error: errorHandler.getErrorMessage(err)
+        });
+    }
+};
+const findProductsByNameKeyword = async (req, res) => {
     try {
         const { name } = req.query;
 
-        // Perform a case-insensitive search for products whose names match the provided keyword
-        const products = await Product.find({ name: String});
+        // Perform a case-insensitive search for products whose names contain the provided keyword
+        const products = await Product.find({ name });
 
         res.json(products);
     } catch (err) {
@@ -86,4 +148,4 @@ const findProductsByName = async (req, res) => {
         });
     }
 };
-export default { create, productByID, read, list, remove, update, findProductsByName}
+export default {getAllProducts, findProductById, addNewProduct, updateProductById, removeProductById, removeAllProducts, findProductsByNameKeyword}
