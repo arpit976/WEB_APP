@@ -18,7 +18,7 @@ const ProductSchema = new mongoose.Schema({
   category: {
     type: String,
     trim: true,
-    required: 'Name is required'
+    required: 'category is required'
   },
   salt: String
 });
